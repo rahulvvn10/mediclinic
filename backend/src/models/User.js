@@ -4,7 +4,10 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-
+  age: Number,
+  gender: String,
+  phone: String,
+  address: String,
   role: {
     type: String,
     enum: ["patient", "doctor", "admin"],
@@ -42,6 +45,15 @@ profileCompleted: {
     type: Boolean,
     default: false,
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  availability: {
+  startTime: String,
+  endTime: String,
+  maxPatientsPerHour: Number,
+},
   resetPasswordToken: String,
 resetPasswordExpires: Date,
 

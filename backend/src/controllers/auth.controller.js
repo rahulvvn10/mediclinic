@@ -36,19 +36,28 @@ const jwt = require("jsonwebtoken");
 const RefreshToken = require("../models/RefreshToken");
 const { generateAccessToken } = require("../utils/jwt");
 
+
+
 const refreshAccessToken = async (req, res) => {
   try {
     const token = req.cookies.refreshToken;
-    if (!token) throw new Error("No refresh token");
 
     const stored = await RefreshToken.findOne({ token });
     if (!stored) throw new Error("Invalid refresh token");
 
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const accessToken = generateAccessToken({ _id: decoded.id, role: "patient" });
+    const user = await User.findById(decoded.id).select("-password");
 
-    res.json({ accessToken });
+    const accessToken = generateAccessToken({
+      _id: user._id,
+      role: user.role,
+    });
+
+    res.json({
+      accessToken,
+      user,
+    });
 
   } catch (err) {
     res.status(401).json({ message: err.message });
@@ -78,7 +87,7 @@ const { generateResetToken } = require("../utils/token");
 
     const user = await User.findOne({ email });
 
-    // 🔐 Security: don't reveal if user exists
+    // 🔐 Security: don't reveal existence
     if (!user) {
       return res.json({ message: "If email exists, reset link sent" });
     }
@@ -90,21 +99,31 @@ const { generateResetToken } = require("../utils/token");
 
     await user.save();
 
-    // 🔗 Reset URL
-    const resetURL = `http://localhost:5011/reset-password/${resetToken}`;
+    // ✅ Use ENV (VERY IMPORTANT)
+    const clientURL = process.env.CLIENT_URL || "http://localhost:3000";
+
+    const resetURL = `${clientURL}/reset-password/${resetToken}`;
 
     const html = `
       <h2>Password Reset</h2>
-      <p>Click the link below:</p>
+      <p>Click below to reset your password:</p>
       <a href="${resetURL}">${resetURL}</a>
       <p>This link expires in 10 minutes</p>
     `;
 
-    console.log("Sending email to:", user.email); // debug
+    try {
+      await sendEmail(user.email, "Password Reset", html);
 
-    await sendEmail(user.email, "Password Reset", html);
+      res.json({ message: "Reset link sent to email" });
 
-    res.json({ message: "Reset link sent to email" });
+    } catch (emailErr) {
+      // ❗ rollback token if email fails
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+
+      throw new Error("Email could not be sent");
+    }
 
   } catch (err) {
     console.error(err);

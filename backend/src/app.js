@@ -7,7 +7,8 @@ const authRoutes = require("./routes/auth.routes");
 const doctorRoutes = require("./routes/doctor.routes");
 const adminRoutes = require("./routes/admin.routes");
 const publicRoutes = require("./routes/public.routes");
-
+const appointmentRoutes = require("./routes/appointment.routes");
+const patientRoutes =require( "./routes/patient.routes");
 const app = express();
 
 app.use(express.json());
@@ -22,4 +23,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api", publicRoutes);
+app.use("/api/patient", patientRoutes);
+app.use("/api/appointments", appointmentRoutes);
 module.exports = app;
